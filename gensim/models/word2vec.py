@@ -113,19 +113,44 @@ except ImportError:
         will use the optimized version from word2vec_inner instead.
 
         """
+
         word_vocabs = [model.vocab[w] for w in sentence if w in model.vocab and
                        model.vocab[w].sample_int > model.random.rand() * 2**32]
-        for pos, word in enumerate(word_vocabs):
+        for pos, word in enumerate(word_vocabs): #pos is the index in the word vocab of the word W for this pass
+
+
+            #this line randomly intializes the model
             reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
 
             # now go over all words from the (reduced) window, predicting each one in turn
             start = max(0, pos - model.window + reduced_window)
-            for pos2, word2 in enumerate(word_vocabs[start:(pos + model.window + 1 - reduced_window)], start):
+            for pos2, word2 in enumerate(word_vocabs[start:(pos + model.window + 1 - reduced_window)], start): #pos2 is the index for the word C in the context window currently being compared with the word W
+
                 # don't train on the `word` itself
-                if pos2 != pos:
+                if pos2 != pos: #index of word C != index of word W
                     train_sg_pair(model, model.index2word[word.index], word2.index, alpha)
 
+
         return len(word_vocabs)
+
+    def train_dep_sentence_sg(model, sentence, alpha, work=None):
+        tally = 0
+        for node in sentence.nodes:
+            wordString = node.get_form()
+            if not (wordString in model.vocab and node.get_pos() == 'VRB'):
+                continue
+
+            tally += 1
+
+            dependents = node.get_dependents()
+            verb_index = model.vocab[wordString].index
+
+            for dependent in dependents:
+                dep_index = model.vocab[dependent.get_form()].index
+                train_sg_pair(model, model.index2word[verb_index], dep_index, alpha)
+
+        return len(tally)
+
 
     def train_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
         """
@@ -138,9 +163,11 @@ except ImportError:
         will use the optimized version from word2vec_inner instead.
 
         """
+
         word_vocabs = [model.vocab[w] for w in sentence if w in model.vocab and
                        model.vocab[w].sample_int > model.random.rand() * 2**32]
         for pos, word in enumerate(word_vocabs):
+            #this line randomly intializes the model
             reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
             start = max(0, pos - model.window + reduced_window)
             window_pos = enumerate(word_vocabs[start:(pos + model.window + 1 - reduced_window)], start)
@@ -648,6 +675,7 @@ class Word2Vec(utils.SaveLoad):
         self.cum_table = other_model.cum_table
         self.corpus_count = other_model.corpus_count
         self.reset_weights()
+# '''THIS IS WHERE WORD2VEC ACTUALLY CALLS Skipgram and Cbow'''
 
     def _do_train_job(self, job, alpha, inits):
         work, neu1 = inits
@@ -658,7 +686,7 @@ class Word2Vec(utils.SaveLoad):
                 tally += train_sentence_sg(self, sentence, alpha, work)
             else:
                 tally += train_sentence_cbow(self, sentence, alpha, work, neu1)
-            raw_tally += len(sentence)
+            raw_tally += len(sentence.nodes)
         return (tally, raw_tally)
 
     def _raw_word_count(self, items):
