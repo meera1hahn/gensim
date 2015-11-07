@@ -557,7 +557,7 @@ class Word2Vec(utils.SaveLoad):
                 #vocab[word] += 1
 
             for node in sentence.nodes:
-                vocab[node.getform()] += 1
+                vocab[node.get_form()] += 1
 
             if self.max_vocab_size and len(vocab) > self.max_vocab_size:
                 total_words += utils.prune_vocab(vocab, min_reduce, trim_rule=trim_rule)
