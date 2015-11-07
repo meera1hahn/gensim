@@ -119,7 +119,6 @@ except ImportError:
         for pos, word in enumerate(word_vocabs): #pos is the index in the word vocab of the word W for this pass
 
 
-            #this line randomly intializes the model
             reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
 
             # now go over all words from the (reduced) window, predicting each one in turn
@@ -137,7 +136,7 @@ except ImportError:
         tally = 0
         for node in sentence.nodes:
             wordString = node.get_form()
-            if not (wordString in model.vocab and node.get_pos() == 'VRB'):
+            if not (wordString in model.vocab and node.is_verb):
                 continue
 
             tally += 1
@@ -179,6 +178,36 @@ except ImportError:
 
         return len(word_vocabs)
 
+    def train_dep_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
+        tally = 0
+        for node in sentence.nodes:
+            wordString = node.get_form()
+            if not (wordString in model.vocab and node.is_verb):
+                continue
+            tally += 1
+
+            dependent = node.get_dependents()
+
+
+
+
+
+
+
+        word_vocabs = [model.vocab[w] for w in sentence if w in model.vocab and
+                       model.vocab[w].sample_int > model.random.rand() * 2**32]
+        for pos, word in enumerate(word_vocabs):
+            #this line randomly intializes the model
+            reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
+            start = max(0, pos - model.window + reduced_window)
+            window_pos = enumerate(word_vocabs[start:(pos + model.window + 1 - reduced_window)], start)
+            word2_indices = [word2.index for pos2, word2 in window_pos if (word2 is not None and pos2 != pos)]
+            l1 = np_sum(model.syn0[word2_indices], axis=0)  # 1 x vector_size
+            if word2_indices and model.cbow_mean:
+                l1 /= len(word2_indices)
+            train_cbow_pair(model, word, word2_indices, l1, alpha)
+
+        return len(word_vocabs)
 
 def train_sg_pair(model, word, context_index, alpha, learn_vectors=True, learn_hidden=True,
                   context_vectors=None, context_locks=None):
@@ -686,7 +715,8 @@ class Word2Vec(utils.SaveLoad):
                 tally += train_sentence_sg(self, sentence, alpha, work)
             else:
                 tally += train_sentence_cbow(self, sentence, alpha, work, neu1)
-            raw_tally += len(sentence.nodes)
+            raw_tally += len(sentence)
+            #raw_tally += len(sentence.nodes)
         return (tally, raw_tally)
 
     def _raw_word_count(self, items):
