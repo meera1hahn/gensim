@@ -553,8 +553,11 @@ class Word2Vec(utils.SaveLoad):
             if sentence_no % progress_per == 0:
                 logger.info("PROGRESS: at sentence #%i, processed %i words, keeping %i word types",
                             sentence_no, sum(itervalues(vocab)) + total_words, len(vocab))
-            for word in sentence:
-                vocab[word] += 1
+            #for word in sentence:
+                #vocab[word] += 1
+
+            for node in sentence.nodes:
+                vocab[node.getform()] += 1
 
             if self.max_vocab_size and len(vocab) > self.max_vocab_size:
                 total_words += utils.prune_vocab(vocab, min_reduce, trim_rule=trim_rule)
