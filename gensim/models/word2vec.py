@@ -134,7 +134,7 @@ except ImportError:
 
     def train_dep_sentence_sg(model, sentence, alpha, work=None):
         tally = 0
-        for node in sentence.nodes:
+        for node in sentence.get_nodes_nohead():
             wordString = node.get_form()
             if not (wordString in model.vocab and node.is_verb):
                 continue
@@ -179,7 +179,7 @@ except ImportError:
 
     def train_dep_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
         tally = 0
-        for node in sentence.nodes:
+        for node in sentence.get_nodes_nohead():
             wordString = node.get_form()
             if not (wordString in model.vocab and node.is_verb):
                 continue
@@ -556,7 +556,7 @@ class Word2Vec(utils.SaveLoad):
             #for word in sentence:
                 #vocab[word] += 1
 
-            for node in sentence.nodes:
+            for node in sentence.get_nodes_nohead():
                 vocab[node.get_form()] += 1
 
             if self.max_vocab_size and len(vocab) > self.max_vocab_size:
