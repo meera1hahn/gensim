@@ -148,7 +148,7 @@ except ImportError:
                 dep_index = model.vocab[dependent.get_form()].index
                 train_sg_pair(model, model.index2word[verb_index], dep_index, alpha)
 
-        return len(tally)
+        return tally
 
 
     def train_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
@@ -166,7 +166,6 @@ except ImportError:
         word_vocabs = [model.vocab[w] for w in sentence if w in model.vocab and
                        model.vocab[w].sample_int > model.random.rand() * 2**32]
         for pos, word in enumerate(word_vocabs):
-            #this line randomly intializes the model
             reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
             start = max(0, pos - model.window + reduced_window)
             window_pos = enumerate(word_vocabs[start:(pos + model.window + 1 - reduced_window)], start)
@@ -185,29 +184,16 @@ except ImportError:
             if not (wordString in model.vocab and node.is_verb):
                 continue
             tally += 1
-
-            dependent = node.get_dependents()
-
-
-
-
-
-
-
-        word_vocabs = [model.vocab[w] for w in sentence if w in model.vocab and
-                       model.vocab[w].sample_int > model.random.rand() * 2**32]
-        for pos, word in enumerate(word_vocabs):
-            #this line randomly intializes the model
-            reduced_window = model.random.randint(model.window)  # `b` in the original word2vec code
-            start = max(0, pos - model.window + reduced_window)
-            window_pos = enumerate(word_vocabs[start:(pos + model.window + 1 - reduced_window)], start)
-            word2_indices = [word2.index for pos2, word2 in window_pos if (word2 is not None and pos2 != pos)]
-            l1 = np_sum(model.syn0[word2_indices], axis=0)  # 1 x vector_size
-            if word2_indices and model.cbow_mean:
-                l1 /= len(word2_indices)
-            train_cbow_pair(model, word, word2_indices, l1, alpha)
-
-        return len(word_vocabs)
+            dependents = node.get_dependents()
+            dependent_indices = []
+            for dependent in dependents:
+                if dependent:
+                    dependent_indices.append(model.vocab[dependent].index)
+            l1 = np_sum(model.syn0[dependent_indices], axis=0)  # 1 x vector_size
+            if dependent_indices and model.cbow_mean:
+                l1 /= len(dependent_indices)
+            train_cbow_pair(model, wordString, dependent_indices, l1, alpha)
+        return tally
 
 def train_sg_pair(model, word, context_index, alpha, learn_vectors=True, learn_hidden=True,
                   context_vectors=None, context_locks=None):
@@ -712,11 +698,11 @@ class Word2Vec(utils.SaveLoad):
         raw_tally = 0
         for sentence in job:
             if self.sg:
-                tally += train_sentence_sg(self, sentence, alpha, work)
+                tally += train_dep_sentence_sg(self, sentence, alpha, work)
             else:
-                tally += train_sentence_cbow(self, sentence, alpha, work, neu1)
-            raw_tally += len(sentence)
-            #raw_tally += len(sentence.nodes)
+                tally += train_dep_sentence_cbow(self, sentence, alpha, work, neu1)
+            #raw_tally += len(sentence)
+            raw_tally += len(sentence.nodes)
         return (tally, raw_tally)
 
     def _raw_word_count(self, items):
