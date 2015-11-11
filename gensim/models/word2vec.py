@@ -96,40 +96,7 @@ from types import GeneratorType
 
 logger = logging.getLogger("gensim.models.word2vec")
 
-def train_dep_sentence_sg(model, sentence, alpha, work=None):
-    tally = 0
-    for node in sentence.get_nodes_nohead():
-        wordString = node.get_form()
-        if not (wordString in model.vocab and node.is_verb):
-            continue
 
-        tally += 1
-
-        dependents = node.get_dependents()
-        verb_index = model.vocab[wordString].index
-
-        for dependent in dependents:
-            dep_index = model.vocab[dependent.get_form()].index
-            train_sg_pair(model, model.index2word[verb_index], dep_index, alpha)
-    return tally
-
-def train_dep_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
-    tally = 0
-    for node in sentence.get_nodes_nohead():
-        wordString = node.get_form()
-        if not (wordString in model.vocab and node.is_verb):
-            continue
-        tally += 1
-        dependents = node.get_dependents()
-        dependent_indices = []
-        for dependent in dependents:
-            if dependent:
-                dependent_indices.append(model.vocab[dependent].index)
-        l1 = np_sum(model.syn0[dependent_indices], axis=0)  # 1 x vector_size
-        if dependent_indices and model.cbow_mean:
-            l1 /= len(dependent_indices)
-        train_cbow_pair(model, wordString, dependent_indices, l1, alpha)
-    return tally
 
 try:
     from gensim.models.word2vec_inner import train_sentence_sg, train_sentence_cbow, FAST_VERSION
@@ -193,6 +160,40 @@ except ImportError:
 
         return len(word_vocabs)
 
+def train_dep_sentence_sg(model, sentence, alpha, work=None):
+    tally = 0
+    for node in sentence.get_nodes_nohead():
+        wordString = node.get_form()
+        if not (wordString in model.vocab and node.is_verb):
+            continue
+
+        tally += 1
+
+        dependents = node.get_dependents()
+        verb_index = model.vocab[wordString].index
+
+        for dependent in dependents:
+            dep_index = model.vocab[dependent.get_form()].index
+            train_sg_pair(model, model.index2word[verb_index], dep_index, alpha)
+    return tally
+
+def train_dep_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
+    tally = 0
+    for node in sentence.get_nodes_nohead():
+        wordString = node.get_form()
+        if not (wordString in model.vocab and node.is_verb):
+            continue
+        tally += 1
+        dependents = node.get_dependents()
+        dependent_indices = []
+        for dependent in dependents:
+            if dependent:
+                dependent_indices.append(model.vocab[dependent].index)
+        l1 = np_sum(model.syn0[dependent_indices], axis=0)  # 1 x vector_size
+        if dependent_indices and model.cbow_mean:
+            l1 /= len(dependent_indices)
+        train_cbow_pair(model, wordString, dependent_indices, l1, alpha)
+    return tally
 
 def train_sg_pair(model, word, context_index, alpha, learn_vectors=True, learn_hidden=True,
                   context_vectors=None, context_locks=None):
@@ -698,7 +699,8 @@ class Word2Vec(utils.SaveLoad):
         work, neu1 = inits
         tally = 0
         raw_tally = 0
-        for sentence in job:
+        for single_job in job:
+            i, sentence = job
             if self.sg:
                 tally += self.train_dep_sentence_sg(self, sentence, alpha, work)
             else:
