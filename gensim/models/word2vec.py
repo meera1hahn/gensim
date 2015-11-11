@@ -700,7 +700,7 @@ class Word2Vec(utils.SaveLoad):
         tally = 0
         raw_tally = 0
         for single_job in job:
-            i, sentence = job
+            i, sentence = single_job
             if self.sg:
                 tally += self.train_dep_sentence_sg(self, sentence, alpha, work)
             else:
