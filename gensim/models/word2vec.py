@@ -162,25 +162,27 @@ except ImportError:
 
 def train_dep_sentence_sg(model, sentence, alpha, work=None):
     tally = 0
-    for node in sentence.get_nodes_nohead():
-        wordString = node.get_form()
+    for i, node in enumerate(sentence.get_nodes_nohead()):
+        wordString = node.get_token()
         if not (wordString in model.vocab and node.is_verb):
             continue
 
         tally += 1
 
-        dependents = node.get_dependents()
+        dependents = sentence.get_dependency_context(which=i)
         verb_index = model.vocab[wordString].index
 
         for dependent in dependents:
-            dep_index = model.vocab[dependent.get_form()].index
+            if dependent.get_token() not in model.vocab:
+                continue
+            dep_index = model.vocab[dependent.get_token()].index
             train_sg_pair(model, model.index2word[verb_index], dep_index, alpha)
     return tally
 
 def train_dep_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
     tally = 0
     for node in sentence.get_nodes_nohead():
-        wordString = node.get_form()
+        wordString = node.get_token()
         if not (wordString in model.vocab and node.is_verb):
             continue
         tally += 1
@@ -557,7 +559,7 @@ class Word2Vec(utils.SaveLoad):
                 #vocab[word] += 1
 
             for node in sentence.get_nodes_nohead():
-                vocab[node.get_form()] += 1
+                vocab[node.get_token()] += 1
 
             if self.max_vocab_size and len(vocab) > self.max_vocab_size:
                 total_words += utils.prune_vocab(vocab, min_reduce, trim_rule=trim_rule)
@@ -700,9 +702,10 @@ class Word2Vec(utils.SaveLoad):
         tally = 0
         raw_tally = 0
         for single_job in job:
-            i, sentence = single_job
+            #i, sentence = single_job
+            sentence = single_job
             if self.sg:
-                tally += self.train_dep_sentence_sg(self, sentence, alpha, work)
+                tally += train_dep_sentence_sg(self, sentence, alpha, work)
             else:
                 tally += train_dep_sentence_cbow(self, sentence, alpha, work, neu1)
             #raw_tally += len(sentence)
