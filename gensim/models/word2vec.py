@@ -181,7 +181,7 @@ def train_dep_sentence_sg(model, sentence, alpha, work=None):
 
 def train_dep_sentence_cbow(model, sentence, alpha, work=None, neu1=None):
     tally = 0
-    for node in sentence.get_nodes_nohead():
+    for node in sentence.get_token_list():
         wordString = node.get_token()
         if not (wordString in model.vocab and node.is_verb):
             continue
